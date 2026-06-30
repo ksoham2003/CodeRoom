@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogIn, Hash } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../services/api";
 import { useRoom } from "../../context/RoomContext";
@@ -43,63 +42,45 @@ const JoinRoom = () => {
 	};
 
 	return (
-		<div className="room-form-card glass animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
-			<div className="room-form-header">
-				<div className="room-form-icon join">
-					<LogIn size={20} />
-				</div>
-				<h2>Join Room</h2>
-				<p>Enter a room code to collaborate</p>
+		<form onSubmit={handleJoin} className="room-form">
+			<div className="input-group">
+				<label htmlFor="join-username">Your Name</label>
+				<input
+					id="join-username"
+					type="text"
+					className="input"
+					placeholder="e.g. Bob"
+					value={username}
+					onChange={(e) => setUsername(e.target.value)}
+					maxLength={30}
+					autoComplete="off"
+					required
+				/>
 			</div>
 
-			<form onSubmit={handleJoin} className="room-form">
-				<div className="input-group">
-					<label htmlFor="join-username">Your Name</label>
-					<input
-						id="join-username"
-						type="text"
-						className="input"
-						placeholder="Enter your display name"
-						value={username}
-						onChange={(e) => setUsername(e.target.value)}
-						maxLength={30}
-						autoComplete="off"
-					/>
-				</div>
+			<div className="input-group">
+				<label htmlFor="join-code">Room Code</label>
+				<input
+					id="join-code"
+					type="text"
+					className="input input-mono"
+					placeholder="A3F9K2"
+					value={roomCode}
+					onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+					maxLength={6}
+					autoComplete="off"
+					required
+				/>
+			</div>
 
-				<div className="input-group">
-					<label htmlFor="join-code">
-						<Hash size={14} style={{ display: "inline", verticalAlign: "middle" }} />
-						Room Code
-					</label>
-					<input
-						id="join-code"
-						type="text"
-						className="input input-mono"
-						placeholder="A3F9K2"
-						value={roomCode}
-						onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-						maxLength={6}
-						autoComplete="off"
-					/>
-				</div>
-
-				<button
-					type="submit"
-					className="btn btn-primary btn-lg room-form-submit"
-					disabled={loading || !username.trim() || !roomCode.trim()}
-				>
-					{loading ? (
-						<span className="btn-loading">Joining...</span>
-					) : (
-						<>
-							<LogIn size={18} />
-							Join Room
-						</>
-					)}
-				</button>
-			</form>
-		</div>
+			<button
+				type="submit"
+				className="btn btn-primary room-form-submit"
+				disabled={loading || !username.trim() || !roomCode.trim()}
+			>
+				{loading ? "Joining..." : "Join Room"}
+			</button>
+		</form>
 	);
 };
 
