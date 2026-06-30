@@ -1,10 +1,42 @@
 import Room from "../models/Room.model.js";
-import { getDocumentContent } from "../services/document.service.js";
+import Document from "../models/Document.model.js";
+import { getDocumentContent, evictDocument } from "../services/document.service.js";
 
 /**
  * Room Socket Handler — manages join/leave, participant tracking, and host privileges.
  */
 const roomHandler = (io, socket) => {
+	/**
+	 * Closes a room by deleting it from database and database-cache,
+	 * notifying all participants, and removing them from the socket room.
+	 */
+	const closeRoom = async (roomCode) => {
+		try {
+			// Notify remaining clients
+			io.to(roomCode).emit("room:closed", {
+				message: "The host has left. This room is now closed.",
+			});
+
+			// Evict document from cache
+			evictDocument(roomCode);
+
+			// Delete database records
+			await Room.deleteOne({ roomCode });
+			await Document.deleteOne({ roomCode });
+
+			// Force leave socket room
+			const roomSockets = await io.in(roomCode).fetchSockets();
+			for (const s of roomSockets) {
+				s.leave(roomCode);
+				s.data.roomCode = null;
+			}
+
+			console.log(`[Room] Room ${roomCode} has been closed because the host left`);
+		} catch (err) {
+			console.error(`[Room] Error closing room ${roomCode}:`, err.message);
+		}
+	};
+
 	/**
 	 * Join a room by roomCode.
 	 * Payload: { roomCode, username }
@@ -224,21 +256,11 @@ const roomHandler = (io, socket) => {
 				(p) => p.socketId !== socket.id,
 			);
 
-			// If host left, assign new host to first remaining participant
-			if (
-				room.hostId === socket.id &&
-				room.participants.length > 0
-			) {
-				room.hostId = room.participants[0].socketId;
-				room.participants[0].isHost = true;
-
-				io.to(roomCode).emit("room:host-changed", {
-					newHostId: room.participants[0].socketId,
-					newHostUsername: room.participants[0].username,
-				});
+			// If host leaves, close the room
+			if (room.hostId === socket.id) {
+				await closeRoom(roomCode);
+				return;
 			}
-
-			await room.save();
 
 			socket.leave(roomCode);
 			socket.data.roomCode = null;
@@ -279,21 +301,11 @@ const roomHandler = (io, socket) => {
 				(p) => p.socketId !== socket.id,
 			);
 
-			// If host left, assign new host to first remaining participant
-			if (
-				room.hostId === socket.id &&
-				room.participants.length > 0
-			) {
-				room.hostId = room.participants[0].socketId;
-				room.participants[0].isHost = true;
-
-				io.to(roomCode).emit("room:host-changed", {
-					newHostId: room.participants[0].socketId,
-					newHostUsername: room.participants[0].username,
-				});
+			// If host disconnects, close the room
+			if (room.hostId === socket.id) {
+				await closeRoom(roomCode);
+				return;
 			}
-
-			await room.save();
 
 			// Notify remaining participants
 			io.to(roomCode).emit("room:participant-left", {

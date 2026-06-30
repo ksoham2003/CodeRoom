@@ -90,6 +90,12 @@ const EditorPage = () => {
 			navigate("/");
 		};
 
+		const handleClosed = (data) => {
+			toast.error(data.message || "The host has left. This room is now closed.", { duration: 4000 });
+			leaveRoom();
+			navigate("/");
+		};
+
 		const handleDelta = (data) => {
 			dispatch({
 				type: "UPDATE_DOCUMENT",
@@ -137,6 +143,7 @@ const EditorPage = () => {
 		socket.on("room:renamed", handleRenamed);
 		socket.on("room:lock-toggled", handleLockToggled);
 		socket.on("room:kicked", handleKicked);
+		socket.on("room:closed", handleClosed);
 		socket.on("doc:delta", handleDelta);
 		socket.on("doc:ack", handleAck);
 		socket.on("doc:full-sync", handleFullSync);
@@ -150,6 +157,7 @@ const EditorPage = () => {
 			socket.off("room:renamed", handleRenamed);
 			socket.off("room:lock-toggled", handleLockToggled);
 			socket.off("room:kicked", handleKicked);
+			socket.off("room:closed", handleClosed);
 			socket.off("doc:delta", handleDelta);
 			socket.off("doc:ack", handleAck);
 			socket.off("doc:full-sync", handleFullSync);
