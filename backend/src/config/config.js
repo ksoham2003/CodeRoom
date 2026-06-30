@@ -5,7 +5,10 @@ dotenv.config({ quiet: true });
 // CLIENT_URL can be a comma-separated list, e.g.:
 // http://localhost:5173,https://code-room-brown.vercel.app
 const rawClientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-const allowedOrigins = rawClientUrl.split(",").map((u) => u.trim()).filter(Boolean);
+const allowedOrigins = rawClientUrl
+	.split(",")
+	.map((u) => u.trim().replace(/\/$/, ""))  // strip trailing slash
+	.filter(Boolean);
 
 const config = {
 	PORT: process.env.PORT || 5000,
