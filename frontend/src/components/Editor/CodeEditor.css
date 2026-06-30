@@ -57,7 +57,7 @@
 }
 
 .editor-textarea:focus {
-  box-shadow: inset 0 0 0 1px rgba(99, 102, 241, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.15);
 }
 
 /* Editor status bar */
