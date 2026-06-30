@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Copy, LogOut, FileCode2 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -17,19 +17,51 @@ const EditorPage = () => {
 	const { socket, isConnected } = useSocket();
 	const { isInRoom, document, joinRoom, leaveRoom, dispatch } = useRoom();
 
+	// Keep a stable ref to username so it's accessible in callbacks without re-running effects
 	const username = location.state?.username || "Anonymous";
+	const usernameRef = useRef(username);
+	usernameRef.current = username;
+
+	// Track whether we've already successfully joined so we don't re-emit on reconnect
+	const hasJoinedRef = useRef(false);
 
 	/**
-	 * Join socket room on mount.
+	 * Emit room:join whenever socket connects (or reconnects) and we haven't joined yet.
+	 * This handles both:
+	 *   1. First connection (normal flow)
+	 *   2. Socket disconnect + reconnect during cold-start latency on Render
 	 */
 	useEffect(() => {
-		if (!socket || !isConnected || !roomCode) return;
+		if (!socket) return;
 
-		// Emit join event
-		socket.emit("room:join", { roomCode, username });
+		const emitJoin = () => {
+			if (!hasJoinedRef.current) {
+				console.log("[EditorPage] Emitting room:join for", roomCode);
+				socket.emit("room:join", { roomCode, username: usernameRef.current });
+			}
+		};
 
-		// Listen for room joined confirmation
+		// Emit now if already connected
+		if (socket.connected) {
+			emitJoin();
+		}
+
+		// Also re-emit on every reconnect in case the socket dropped during cold start
+		socket.on("connect", emitJoin);
+
+		return () => {
+			socket.off("connect", emitJoin);
+		};
+	}, [socket, roomCode]);
+
+	/**
+	 * Register all room/document event handlers.
+	 */
+	useEffect(() => {
+		if (!socket) return;
+
 		const handleJoined = (data) => {
+			hasJoinedRef.current = true;
 			joinRoom({
 				roomCode: data.roomCode,
 				roomName: data.roomName,
@@ -100,28 +132,23 @@ const EditorPage = () => {
 			dispatch({
 				type: "UPDATE_DOCUMENT",
 				payload: {
-					content: null, // Will be handled by CodeEditor via applyRemoteDelta
+					content: null,
 					version: data.version,
 				},
 			});
-			// Apply the remote delta directly
 			const { delta, version } = data;
 			let content = document.content;
 			const { type, position, content: deltaContent } = delta;
 			const clampedPos = Math.max(0, Math.min(position, content.length));
 
 			if (type === "insert") {
-				content =
-					content.slice(0, clampedPos) + deltaContent + content.slice(clampedPos);
+				content = content.slice(0, clampedPos) + deltaContent + content.slice(clampedPos);
 			} else if (type === "delete") {
 				const deleteEnd = Math.min(clampedPos + deltaContent.length, content.length);
 				content = content.slice(0, clampedPos) + content.slice(deleteEnd);
 			}
 
-			dispatch({
-				type: "UPDATE_DOCUMENT",
-				payload: { content, version },
-			});
+			dispatch({ type: "UPDATE_DOCUMENT", payload: { content, version } });
 		};
 
 		const handleAck = (data) => {
@@ -162,7 +189,7 @@ const EditorPage = () => {
 			socket.off("doc:ack", handleAck);
 			socket.off("doc:full-sync", handleFullSync);
 		};
-	}, [socket, isConnected, roomCode]);
+	}, [socket, dispatch, joinRoom, leaveRoom, navigate, document.content]);
 
 	/**
 	 * Copy room code to clipboard.
@@ -186,6 +213,11 @@ const EditorPage = () => {
 			<div className="editor-page-loading">
 				<div className="loading-spinner" />
 				<p>Connecting to room <strong>{roomCode}</strong>...</p>
+				<p className="loading-hint">
+					{!isConnected
+						? "Waiting for server connection..."
+						: "Joining room..."}
+				</p>
 			</div>
 		);
 	}
