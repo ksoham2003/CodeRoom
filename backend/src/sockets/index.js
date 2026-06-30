@@ -21,7 +21,8 @@ const initializeSocket = (httpServer) => {
 				if (!origin) return callback(null, true);
 				if (allowedOrigins.includes(origin)) return callback(null, true);
 				console.warn(`[Socket CORS] Blocked origin: ${origin}`);
-				return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+				// Return false (not an Error) so it rejects cleanly without 500
+				return callback(null, false);
 			},
 			methods: ["GET", "POST"],
 			credentials: true,

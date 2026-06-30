@@ -22,7 +22,8 @@ const corsOptions = {
 			return callback(null, true);
 		}
 		console.warn(`[CORS] Blocked origin: ${origin}`);
-		return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+		// Return false (not an Error) so Express sends 403, not 500
+		return callback(null, false);
 	},
 	credentials: true,
 };
