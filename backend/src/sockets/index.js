@@ -10,10 +10,19 @@ import presenceHandler from "./presenceHandler.js";
  * @returns {Server} The Socket.io server instance
  */
 const initializeSocket = (httpServer) => {
+	const allowedOrigins = Array.isArray(config.CLIENT_URL)
+		? config.CLIENT_URL
+		: [config.CLIENT_URL];
+
 	const io = new Server(httpServer, {
 		pingTimeout: 60000,
 		cors: {
-			origin: config.CLIENT_URL,
+			origin: (origin, callback) => {
+				if (!origin) return callback(null, true);
+				if (allowedOrigins.includes(origin)) return callback(null, true);
+				console.warn(`[Socket CORS] Blocked origin: ${origin}`);
+				return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+			},
 			methods: ["GET", "POST"],
 			credentials: true,
 		},

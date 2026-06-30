@@ -8,15 +8,29 @@ import roomRoute from "./routes/room.route.js";
 // Express instance
 const app = express();
 
+// Build allowed origins array
+const allowedOrigins = Array.isArray(config.CLIENT_URL)
+	? config.CLIENT_URL
+	: [config.CLIENT_URL];
+
+// Dynamic CORS origin checker
+const corsOptions = {
+	origin: (origin, callback) => {
+		// Allow requests with no origin (e.g. mobile apps, curl, Postman)
+		if (!origin) return callback(null, true);
+		if (allowedOrigins.includes(origin)) {
+			return callback(null, true);
+		}
+		console.warn(`[CORS] Blocked origin: ${origin}`);
+		return callback(new Error(`CORS policy: origin ${origin} not allowed`));
+	},
+	credentials: true,
+};
+
 // Middlewares
 app.use(express.json());
 app.use(morgan("dev"));
-app.use(
-	cors({
-		origin: config.CLIENT_URL,
-		credentials: true,
-	}),
-);
+app.use(cors(corsOptions));
 
 // Health check
 app.get("/check", (_, res) => {
