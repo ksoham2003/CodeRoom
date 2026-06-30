@@ -207,6 +207,59 @@ const roomHandler = (io, socket) => {
 	});
 
 	/**
+	 * Leave a room manually.
+	 */
+	socket.on("room:leave", async ({ roomCode }) => {
+		try {
+			if (!roomCode) return;
+			const room = await Room.findOne({ roomCode: roomCode.toUpperCase() });
+			if (!room) return;
+
+			const leavingUser = room.participants.find(
+				(p) => p.socketId === socket.id,
+			);
+			if (!leavingUser) return;
+
+			room.participants = room.participants.filter(
+				(p) => p.socketId !== socket.id,
+			);
+
+			// If host left, assign new host to first remaining participant
+			if (
+				room.hostId === socket.id &&
+				room.participants.length > 0
+			) {
+				room.hostId = room.participants[0].socketId;
+				room.participants[0].isHost = true;
+
+				io.to(roomCode).emit("room:host-changed", {
+					newHostId: room.participants[0].socketId,
+					newHostUsername: room.participants[0].username,
+				});
+			}
+
+			await room.save();
+
+			socket.leave(roomCode);
+			socket.data.roomCode = null;
+
+			// Notify remaining participants
+			io.to(roomCode).emit("room:participant-left", {
+				socketId: socket.id,
+				username: leavingUser.username,
+				reason: "left",
+				participantCount: room.participants.length,
+			});
+
+			console.log(
+				`[Room] ${leavingUser.username} left room ${roomCode} manually`,
+			);
+		} catch (err) {
+			console.error("[Room] Leave cleanup error:", err.message);
+		}
+	});
+
+	/**
 	 * Handle disconnection — clean up participant from room.
 	 */
 	socket.on("disconnect", async () => {

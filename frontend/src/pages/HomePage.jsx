@@ -1,10 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CreateRoom from "../components/Room/CreateRoom";
 import JoinRoom from "../components/Room/JoinRoom";
+import { useRoom } from "../context/RoomContext";
+import { useSocket } from "../context/SocketContext";
 import "./HomePage.css";
 
 const HomePage = () => {
 	const [activeTab, setActiveTab] = useState("join");
+	const { socket } = useSocket();
+	const { roomCode, leaveRoom } = useRoom();
+
+	useEffect(() => {
+		if (roomCode && socket) {
+			socket.emit("room:leave", { roomCode });
+		}
+		leaveRoom();
+	}, [roomCode, socket, leaveRoom]);
 
 	return (
 		<div className="home-page">
