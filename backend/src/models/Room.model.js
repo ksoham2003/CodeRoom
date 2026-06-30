@@ -27,7 +27,7 @@ const roomSchema = new mongoose.Schema(
 		},
 		hostId: {
 			type: String,
-			required: true,
+			default: null,
 		},
 		participants: [participantSchema],
 		isLocked: {
