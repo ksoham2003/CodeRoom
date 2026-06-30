@@ -25,7 +25,8 @@ export const createRoom = asyncHandler(async (req, res) => {
  */
 export const joinRoom = asyncHandler(async (req, res) => {
 	const { roomCode, username } = req.body;
-	const result = await joinRoomService({ roomCode, username });
+	const io = req.app.get("io");
+	const result = await joinRoomService({ roomCode, username, io });
 
 	return res
 		.status(200)

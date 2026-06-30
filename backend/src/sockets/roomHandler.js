@@ -23,6 +23,24 @@ const roomHandler = (io, socket) => {
 				return;
 			}
 
+			// Check if username is already taken by another active socket in the room
+			const existingParticipant = room.participants.find(
+				(p) => p.username.toLowerCase() === username.trim().toLowerCase()
+			);
+
+			if (existingParticipant) {
+				const isSocketActive = io.sockets.sockets.has(existingParticipant.socketId);
+				if (isSocketActive) {
+					socket.emit("room:error", { message: "Username is already taken in this room" });
+					return;
+				}
+
+				// Reconnection case: remove the old stale participant with the same username
+				room.participants = room.participants.filter(
+					(p) => p.username.toLowerCase() !== username.trim().toLowerCase()
+				);
+			}
+
 			// Determine if this is the first participant (host)
 			const isHost = room.participants.length === 0;
 

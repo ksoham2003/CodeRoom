@@ -45,7 +45,7 @@ export const createRoomService = async ({ username }) => {
 /**
  * Validate a room code and return room info for joining.
  */
-export const joinRoomService = async ({ roomCode, username }) => {
+export const joinRoomService = async ({ roomCode, username, io }) => {
 	if (!roomCode || !roomCode.trim()) {
 		throw new ApiError(400, "Room code is required");
 	}
@@ -57,6 +57,18 @@ export const joinRoomService = async ({ roomCode, username }) => {
 
 	if (!room) {
 		throw new ApiError(404, "Room not found. Please check the room code.");
+	}
+
+	// Check if username is already taken by another active participant
+	const existingParticipant = room.participants.find(
+		(p) => p.username.toLowerCase() === username.trim().toLowerCase()
+	);
+
+	if (existingParticipant) {
+		const isSocketActive = io && io.sockets.sockets.has(existingParticipant.socketId);
+		if (isSocketActive) {
+			throw new ApiError(409, "Username is already taken in this room");
+		}
 	}
 
 	if (room.isLocked) {
