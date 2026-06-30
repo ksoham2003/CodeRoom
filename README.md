@@ -15,15 +15,6 @@ A real-time collaborative code editor built for the **Kodex Mini Hack-Sprint**.
 | Realtime | Socket.io                        |
 | Database | MongoDB (Mongoose ODM)           |
 
-## 👥 Team & Domain Ownership
-
-| Domain                              | Owner  |
-|--------------------------------------|--------|
-| **A — Auth & Room Management**       | TBD    |
-| **B — Document & Sync Engine**       | TBD    |
-| **C — Realtime & Presence**          | TBD    |
-| **MongoDB Persistence**             | TBD    |
-
 ## ⚡ Conflict Resolution Strategy
 
 Our system uses a **custom position-shifting transform with timestamp-based Last-Write-Wins (LWW)** — no banned libraries (Yjs, ShareDB, Automerge).
